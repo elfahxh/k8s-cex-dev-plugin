@@ -28,6 +28,7 @@ import (
 	"net"
 	"os"
 	"path"
+	"strconv"
 	"strings"
 	"time"
 
@@ -91,6 +92,14 @@ func scanForEligibleAPQNs(cextype string) APQNList {
 	return allAPQNs.filterMode(cextype)
 }
 
+func getAPQNOverCommits() int {
+	overCommit, err := strconv.Atoi(os.Getenv("APQN_OVERCOMMITS"))
+	if err != nil || overCommit <= 0 || overCommit >= 100 {
+		overCommit = zcryptAPQNOverCommits
+	}
+	return overCommit
+}
+
 func makePluginDevsFromAPQNs(apqns APQNList) []*k8spapi.Device {
 
 	var devices []*k8spapi.Device
@@ -100,8 +109,9 @@ func makePluginDevsFromAPQNs(apqns APQNList) []*k8spapi.Device {
 		if !a.online {
 			health = k8spapi.Unhealthy
 		}
-		if zcryptAPQNOverCommits > 1 {
-			for i := 0; i < zcryptAPQNOverCommits; i++ {
+		apqnOverCommits := getAPQNOverCommits()
+		if apqnOverCommits > 1 {
+			for i := 0; i < apqnOverCommits; i++ {
 				devices = append(devices, &k8spapi.Device{
 					ID:     fmt.Sprintf("apqn_%d_%d-%d", a.adapter, a.domain, i),
 					Health: health,
